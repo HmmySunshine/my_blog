@@ -1,7 +1,7 @@
 package com.fanzehao.blogsystem.Service.impl;
 
 import com.fanzehao.blogsystem.Service.UserService;
-import com.fanzehao.blogsystem.mapper.UserMapper;
+
 import com.fanzehao.blogsystem.pojo.User;
 import com.fanzehao.blogsystem.repository.UserRepository;
 import com.fanzehao.blogsystem.response.LoginResponse;
@@ -16,8 +16,7 @@ import java.util.Optional;
 
 @Service
 public class UserServiceImpl implements UserService {
-    @Autowired
-    private UserMapper userMapper;
+
     @Autowired
     private UserRepository userRepository;
 
@@ -34,17 +33,12 @@ public class UserServiceImpl implements UserService {
     @Override
     public Result<?> login(String username, String password)
     {
-        Optional<User> optionalUser = Optional.ofNullable(userMapper.selectUser(username));
-
+        Optional<User> optionalUser = Optional.ofNullable(userRepository.findByUsername(username));
         if (!optionalUser.isPresent())
             return Result.fail(401,"不存在用户名");
-
-
         if (!Utils.checkPassword(password,optionalUser.get().getPassword()))
             return Result.fail(401,"密码错误");
 
-        //更新登录时间
-        //update users set last_login = now() where username = ?
         userRepository.updateLastLogin(username);
         if (userRepository.updateLastLogin(username) == 0)
             return Result.fail("更新登录时间失败");
@@ -59,9 +53,7 @@ public class UserServiceImpl implements UserService {
     public Result<?> register(String username, String password, String email) {
         try {
             if(userRepository.existsByUsername(username))
-                return Result.fail(409,"用户名已存在");
-
-
+                return Result.fail(409,"用户名已存在,邮箱已被注册");
             User user = new User();
             //管理员只能这个邮箱测试
             if (email.equals("1647114628@qq.com")) {
@@ -70,14 +62,12 @@ public class UserServiceImpl implements UserService {
             user.setUsername(username);
             user.setPassword(Utils.hashPassword(password));
             user.setEmail(email);
-
             userRepository.save(user);
         }
         catch (Exception e)
         {
             return Result.fail("注册失败");
         }
-
         return Result.success("注册成功");
     }
 

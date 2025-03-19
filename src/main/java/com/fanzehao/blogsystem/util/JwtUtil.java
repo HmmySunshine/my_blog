@@ -30,12 +30,10 @@ public class JwtUtil {
             expiration = 86400000;
         else
             expiration = 3600000;
-
         // 使用密钥生成SecretKey
         SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         // 使用Jwts生成token
-        return Jwts.builder()
-                .setClaims(claims)
+        return Jwts.builder().setClaims(claims)
                 // 设置过期时间
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 // 使用密钥签名

@@ -37,4 +37,10 @@ public class CommentController {
                                  @RequestParam(value = "pageSize", defaultValue = "5") Integer pageSize) {
         return commentService.getComments(articleId, page, pageSize);
     }
+
+    //获取评论总数
+    @GetMapping("/counts")
+    public Result<?> getCommentCounts(){
+        return Result.success(commentService.getCommentCounts());
+    }
 }

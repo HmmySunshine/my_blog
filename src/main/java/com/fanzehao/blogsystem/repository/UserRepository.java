@@ -13,6 +13,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // 方法签名：existsBy + 属性名
     boolean existsByUsername(String username);
 
+    @Query("select u from User u where u.username = :username")
+    User findByUsername(String username);
 
     boolean existsByEmail(String email);
 

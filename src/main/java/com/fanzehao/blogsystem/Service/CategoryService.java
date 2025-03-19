@@ -2,6 +2,7 @@ package com.fanzehao.blogsystem.Service;
 
 import com.fanzehao.blogsystem.mapper.CategoryMapper;
 import com.fanzehao.blogsystem.model.Category;
+import com.fanzehao.blogsystem.repository.ArticleRepository;
 import com.fanzehao.blogsystem.repository.CategoryRepository;
 import com.github.pagehelper.PageHelper;
 
@@ -13,13 +14,31 @@ import org.springframework.data.domain.Pageable;
 
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 @Service
 public class CategoryService {
     @Autowired
     private CategoryRepository categoryRepository;
     @Autowired
     private CategoryMapper categoryMapper;
+
+    @Autowired
+    private ArticleRepository articleRepository;
+
+    public Map<Long, Long> getCategoryCounts() {
+        List<Object[]> results = articleRepository.countByCategory();
+        Map<Long, Long> counts = new HashMap<>();
+        for (Object[] result : results) {
+            Long categoryId = (Long) result[0];
+            Long count = (Long) result[1];
+            if (categoryId == null) categoryId = -1L;
+            counts.put(categoryId, count);
+        }
+        return counts;
+    }
     public Page<Category> findAllByPage(Integer page, Integer pageSize) {
         try {
             Pageable pageable = PageRequest.of(page, pageSize);
@@ -92,5 +111,13 @@ public class CategoryService {
             return null;
         }
 
+    }
+
+    public Long getCategoriesTotal() {
+        return categoryRepository.countAllCategories();
+    }
+
+    public String getCategoryNameById(Long id) {
+        return categoryRepository.findCategoryNameById(id);
     }
 }

@@ -44,12 +44,12 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
             catch (Exception e) {
                 // 如果 Token 无效
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Invalid token");
+                response.getWriter().write("Invalid token,权限不足");
                 return false;
             }
         }
         // 如果未提供 Token
-        System.out.println("token is null");
+
         response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 返回403
         response.getWriter().write("Token is required");
         return false;

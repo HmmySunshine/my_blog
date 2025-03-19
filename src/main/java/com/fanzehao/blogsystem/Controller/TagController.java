@@ -15,12 +15,20 @@ public class TagController {
     @Autowired
     private TagService tagService;
 
+    //分页获取标签
     @GetMapping()
     public Result<?> getAllTags(@RequestParam(value = "name",required = false) String name,
                                 @RequestParam(value = "page", defaultValue = "1") Integer page,
                                 @RequestParam(value = "pageSize", defaultValue = "5") Integer pageSize){
 
         return tagService.getTagsByPage(name, page, pageSize);
+
+    }
+
+    //获取所有标签
+    @GetMapping("/all")
+    public Result<?> getAllTags(){
+    return tagService.getAllTags();
 
     }
 
@@ -42,4 +50,10 @@ public class TagController {
 
         return tagService.deleteTag(id);
     }
+
+    @GetMapping("/counts")
+    public Result<?> getTagCounts(){
+        return Result.success(tagService.getTagCounts());
+    }
+
 }

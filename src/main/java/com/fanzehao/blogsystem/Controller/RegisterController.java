@@ -37,7 +37,7 @@ public class RegisterController {
     public Result<?> register(@RequestBody UserDao userDao) {
         if (!Utils.isUsernameValid(userDao.getUsername())) {
             System.out.println(userDao.getUsername());
-            return Result.fail(400,"用户名只能包含字母、数字和下划线，长度在3到16之间");
+            return Result.fail(400,"用户名格式不合法,用户名只能包含字母、数字和下划线，长度在3到16之间");
         }
         if (!Utils.isPasswordValid(userDao.getPassword())) {
             return Result.fail(400,"密码只能包含字母、数字和下划线和.，长度在6到16之间");
@@ -45,7 +45,6 @@ public class RegisterController {
         if (!verificationService.VerifyCode(userDao.getEmail(), userDao.getVerificationCode())) {
             return Result.fail("验证码错误");
         }
-
         return userService.register(userDao.getUsername(), userDao.getPassword(), userDao.getEmail());
     }
 

@@ -1,4 +1,5 @@
 package com.fanzehao.blogsystem.Controller;
+
 import com.fanzehao.blogsystem.Service.AlgoliaService;
 import com.fanzehao.blogsystem.Service.ArticleService;
 import com.fanzehao.blogsystem.Service.CategoryService;
@@ -41,11 +42,15 @@ public class ArticleController {
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
     private static final String ARTICLE_VIEW_COUNT_KEY = "article:view:count";
-    private final static String U = "http://localhost:8090";
 
+    //如果是windows系统用此url
+    private final static String U = "http://localhost:8090";
+    //如果是linux系统用此url,会使用nginx代理到http://localhost:8090
+    private  final static String U2 = "www.fzhblog.cn";
     private static final Logger logger = Logger.getLogger(ArticleController.class.getName());
     @Autowired
     private TagService tagService;
+
 
 
     @Value("${temp.directory}")
@@ -56,6 +61,13 @@ public class ArticleController {
 
     @Autowired
     private CategoryService categoryService;
+
+    //根据文章id获取对应的所有标签
+    @GetMapping("/{id}/tags")
+    public Result<?> getTagsByArticleId(@PathVariable Long id) {
+        return articleService.getTagsByArticleId(id);
+    }
+
     /*
     "http://localhost:8090/api/articles",
             {
@@ -69,10 +81,7 @@ public class ArticleController {
      */
     @GetMapping("/{id}")
     public Result<?> getArticleById(@PathVariable Long id) {
-        System.out.println(redisTemplate.getKeySerializer().getClass().getName());
-        System.out.println(redisTemplate.getValueSerializer().getClass().getName());
-        System.out.println(redisTemplate.getHashKeySerializer().getClass().getName());
-        System.out.println(redisTemplate.getHashValueSerializer().getClass().getName());
+
 
         redisTemplate.opsForHash().increment(ARTICLE_VIEW_COUNT_KEY, id.toString(), 1);
 
@@ -97,7 +106,7 @@ public class ArticleController {
         String title = (String) articleData.get("title");
         article.setTitle(title);
 
-        String summary = (String)articleData.get("summary");
+        String summary = (String) articleData.get("summary");
         article.setSummary(summary);
         // 获取标签列表
 
@@ -110,13 +119,13 @@ public class ArticleController {
         article.setTagsSet(tags);
 
 
-        Long categoryId = ((Integer)articleData.get("categoryId")).longValue();
+        Long categoryId = ((Integer) articleData.get("categoryId")).longValue();
 
         Category category = categoryService.findById(categoryId);
         article.setCategory(category);
         //返回的数组
 
-        String content = (String)articleData.get("content");
+        String content = (String) articleData.get("content");
         article.setContent(content);
         // 处理临时图片
         @SuppressWarnings("unchecked")
@@ -128,7 +137,6 @@ public class ArticleController {
         //]
         if (tempImages != null && !tempImages.isEmpty()) {
 
-
             Set<Image> images = null;
             for (Map<String, String> tempImage : tempImages) {
                 try {
@@ -136,21 +144,17 @@ public class ArticleController {
                     String tempFileName = tempUrl.substring(tempUrl.lastIndexOf('/') + 1);
                     String newFileName = UUID.randomUUID() +
                             tempFileName.substring(tempFileName.lastIndexOf('.'));
-
                     // 移动文件
                     logger.info("临时文件路径: " + tempDirectory + tempFileName);
                     Path tempPath = Paths.get(tempDirectory, tempFileName);
                     // 目标文件路径
                     logger.info("目标文件路径: " + uploadDirectory + newFileName);
                     Path targetPath = Paths.get(uploadDirectory, newFileName);
-
                     Files.move(tempPath, targetPath, StandardCopyOption.REPLACE_EXISTING);
-
                     // 创建图片实体
                     Image image = new Image();
                     image.setOriginalName(tempFileName);
                     image.setPath(targetPath.toString());
-
                     image.setUrl(U + "/article_img/" + newFileName);
                     image.setSize(Files.size(targetPath));
                     image.setType(Files.probeContentType(targetPath));
@@ -165,7 +169,6 @@ public class ArticleController {
                     // 添加到文章的图片集合
                     images = new HashSet<>();
                     images.add(image);
-
 
                 } catch (IOException e) {
                     throw new RuntimeException("处理图片失败: " + e.getMessage());
@@ -194,6 +197,7 @@ public class ArticleController {
     public Result<?> getArticle(@RequestParam(defaultValue = "0") Integer page,
                                 @RequestParam(defaultValue = "10") Integer pageSize) {
 
+
         Page<Article> pageArticles = articleService.findAllArticles(page, pageSize);
         return Result.success(new ArticleResponse(pageArticles.getContent(), pageArticles.getTotalElements()));
     }
@@ -202,6 +206,7 @@ public class ArticleController {
     public Result<?> deleteArticle(@PathVariable Long id) {
 
         if (articleService.deleteArticleById(id)) {
+            algoliaService.deleteArticle(id);
             return Result.success("删除成功");
         } else {
             return Result.fail();
@@ -213,6 +218,7 @@ public class ArticleController {
 
         if (articleService.updateAriticleById(id, article)) {
             algoliaService.deleteArticle(id);
+            algoliaService.saveArticle(article);
             return Result.success("更新成功");
         } else {
             return Result.fail();
@@ -220,11 +226,51 @@ public class ArticleController {
 
     }
 
-    @GetMapping("/{id}/tags")
-    public Result<?> getArticleTags(@PathVariable Long id) {
-        Set<Tag> tagsByArticleId = articleService.findTagsByArticleId(id);
+    //http://localhost:8090/api/articles/category/1
+    @GetMapping("/category/{id}")
+    public Result<?> getArticleByCategoryId(@PathVariable String id, @RequestParam(defaultValue = "0") Integer page,
+                                            @RequestParam(defaultValue = "10") Integer pageSize) {
 
-        return Result.success(tagsByArticleId);
+
+        if (id.equalsIgnoreCase("uncategorized")) {
+            return getUncategorizedArticles(page, pageSize);
+        }
+
+        try {
+            Long categoryId = Long.parseLong(id);
+            Page<Article> pageArticles = articleService.findArticlesByCategoryId(categoryId, page, pageSize);
+            return Result.success(new ArticleResponse(pageArticles.getContent(), pageArticles.getTotalElements()));
+        } catch (NumberFormatException e) {
+            return Result.fail("无效的分类ID");
+        }
     }
+
+
+    //根据标签获取文章分页
+    @GetMapping("/tag/{tagId}")
+    public Result<?> getArticlesByTag(@PathVariable Long tagId, @RequestParam(defaultValue = "0") Integer page,
+                                      @RequestParam(defaultValue = "10") Integer pageSize) {
+        Page<Article> articles = articleService.findArticlesByTagId(tagId, page, pageSize);
+        return Result.success(articles);
+
+
+    }
+
+
+    //未分类的所有文章
+    @GetMapping("/category/uncategorized")
+    public Result<?> getUncategorizedArticles(@RequestParam(defaultValue = "0") Integer page,
+                                              @RequestParam(defaultValue = "10") Integer pageSize) {
+        Page<Article> articles = articleService.findUncategorizedArticles(page, pageSize);
+        return Result.success(new ArticleResponse(articles.getContent(), articles.getTotalElements()));
+    }
+
+    //获取文章总数
+    @GetMapping("/counts")
+    public Result<?> countAllArticles() {
+        return Result.success(articleService.countAllArticles());
+    }
+
+
 
 }

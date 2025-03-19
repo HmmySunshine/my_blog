@@ -35,14 +35,11 @@ public class VerificationService {
         if (!Utils.isEmailValid(to) || to.isEmpty()) {
             return Result.fail(400,"邮箱格式不正确");
         }
-
         String verificationCode = getVerificationCode(to);
         try {
             if (fromEmail == null || fromEmail.isEmpty())
                 fromEmail = "1647114628@qq.com";
-
             SimpleMailMessage message = new SimpleMailMessage();
-
             message.setFrom(fromEmail);  // 发送者
             message.setTo(to);  // 接收者
             message.setSubject("您的验证码");  // 邮件主题
@@ -52,7 +49,6 @@ public class VerificationService {
         }
         catch (Exception e) {
             return Result.fail("邮件发送失败" + e.getMessage());
-
 
         }
     }
@@ -75,6 +71,7 @@ public class VerificationService {
         }
         return false;
     }
+
 
 
 }

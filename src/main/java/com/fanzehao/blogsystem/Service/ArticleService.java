@@ -5,6 +5,7 @@ import com.fanzehao.blogsystem.model.Image;
 import com.fanzehao.blogsystem.model.Tag;
 import com.fanzehao.blogsystem.repository.ArticleRepository;
 import com.fanzehao.blogsystem.repository.ImageRepository;
+import com.fanzehao.blogsystem.response.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -43,6 +45,7 @@ public class ArticleService {
         if (page == null || page < 1) {
             page = 1;
         }
+
         Pageable pageable = PageRequest.of(page - 1, pageSize);
         return articleRepository.findAll(pageable);
 
@@ -98,7 +101,15 @@ public class ArticleService {
         }
     }
 
-    public Set<Tag> findTagsByArticleId(Long id) {
+    public Page<Article> findUncategorizedArticles(Integer page, Integer pageSize) {
+        if (page == null || page < 1) {
+            page = 1;
+
+        }
+        Pageable pageable = PageRequest.of(page - 1, pageSize);
+        return articleRepository.findByCategoryIdIsNull(pageable);
+    }
+    public Set<Tag> findtagsSetByArticleId(Long id) {
         return articleRepository.findById(id).orElseThrow(() -> new RuntimeException("Article not found")).getTagsSet();
     }
 
@@ -108,5 +119,32 @@ public class ArticleService {
 
     public void updateViewCount(Long articleId, Integer viewCount) {
         articleRepository.incrementViewCount(articleId, viewCount);
+    }
+
+    public Page<Article> findArticlesByCategoryId(Long id, Integer page, Integer pageSize) {
+        if (page == null || page < 1) {
+            page = 1;
+
+        }
+        Pageable pageable = PageRequest.of(page - 1, pageSize);
+        return articleRepository.findByCategoryId(id, pageable);
+    }
+
+
+    public Page<Article> findArticlesByTagId(Long tagId, Integer page, Integer pageSize) {
+        if (page == null || page < 1) {
+
+            page = 1;
+        }
+        Pageable pageable = PageRequest.of(page - 1, pageSize);
+        return articleRepository.findByTagsSet_id(tagId, pageable);
+    }
+
+    public Long countAllArticles() {
+        return articleRepository.countAllArticles();
+    }
+
+    public Result<?> getTagsByArticleId(Long id) {
+        return Result.success(findtagsSetByArticleId(id));
     }
 }

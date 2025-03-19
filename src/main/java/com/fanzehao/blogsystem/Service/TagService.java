@@ -1,6 +1,8 @@
 package com.fanzehao.blogsystem.Service;
 
+import com.fanzehao.blogsystem.model.Article;
 import com.fanzehao.blogsystem.model.Tag;
+import com.fanzehao.blogsystem.repository.ArticleRepository;
 import com.fanzehao.blogsystem.repository.TagRepository;
 import com.fanzehao.blogsystem.response.PageResponse;
 import com.fanzehao.blogsystem.response.Result;
@@ -8,15 +10,15 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import javax.persistence.EntityNotFoundException;
+import java.util.*;
 
 
 @Service
@@ -24,10 +26,21 @@ public class TagService {
     private static final Logger logger = LoggerFactory.getLogger(TagService.class);
     private final TagRepository tagRepository;
 
+    @Autowired
+    private ArticleRepository articleRepository;
+
     public TagService(TagRepository tagRepository) {
         this.tagRepository = tagRepository;
     }
 
+    public Map<Long, Long> getTagCounts() {
+        List<Object[]> objects = articleRepository.countByTags();
+        Map<Long, Long> tagCounts = new HashMap<>();
+        for (Object[] object : objects) {
+            tagCounts.put((Long) object[0], (Long) object[1]);
+        }
+        return tagCounts;
+    }
     public Result<?> getTagsByPage(String name, Integer page, Integer pageSize) {
         try {
             Pageable pageable = PageRequest.of(page - 1, pageSize);
@@ -103,19 +116,20 @@ public class TagService {
         }
     }
     @Transactional
-    public Result<?> deleteTag(Long id) {
-        try {
-            Optional<Tag> deleteTag = tagRepository.findById(id);
-            if (!deleteTag.isPresent()) {
-                return Result.fail("标签不存在");
-            }
-            tagRepository.deleteById(id);
-            return Result.success("删除成功");
-        }
-        catch (Exception e) {
-            logger.error("删除标签失败", e);
-            return Result.fail("删除标签失败");
-        }
+    public Result<?> deleteTag(Long tagId) {
+        Tag tag = tagRepository.findById(tagId)
+                .orElseThrow(() -> new EntityNotFoundException("标签不存在"));
+
+        // 获取所有关联该标签的文章
+        Set<Article> articles = articleRepository.findByTagsSetContains(tag);
+
+        // 从所有文章中移除该标签
+        articles.forEach(article -> article.getTagsSet().remove(tag));
+        articleRepository.saveAll(articles); // 更新文章关联
+
+        // 现在可以安全删除标签
+        tagRepository.delete(tag);
+        return Result.success("删除标签成功");
 
     }
 
@@ -138,4 +152,6 @@ public class TagService {
         }
         return tags;
     }
+
+
 }

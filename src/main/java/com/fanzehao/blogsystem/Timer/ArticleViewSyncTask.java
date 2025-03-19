@@ -27,9 +27,10 @@ public class ArticleViewSyncTask {
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ArticleViewSyncTask.class);
     private static final String ARTICLE_VIEW_COUNT_KEY = "article:view:count";
 
+    //实际每小时同步一次
 
     @Transactional
-    @Scheduled(cron = "0 0/1 * * * ?")
+    @Scheduled(cron = "0 0 * * * ?")
     //为了测试所以一分钟执行一次
     public void syncViewCounts() {
         Map<Object, Object> viewCounts = redisTemplate.opsForHash().entries(ARTICLE_VIEW_COUNT_KEY);

@@ -8,6 +8,7 @@ import javax.persistence.*;
 @Data
 @Table(name = "visit")
 public class VisitCount {
+
     @Id
     @GeneratedValue(strategy = javax.persistence.GenerationType.IDENTITY)
     private Long id;
@@ -16,8 +17,5 @@ public class VisitCount {
     private Long totalVisitCount;
 
     @Column(name = "today_view")
-    private Long tedayVisitCount;
-
-    @Column(name = "article_views")
-    private Long totalArticleVisitCount;
+    private Long todayVisitCount;
 }

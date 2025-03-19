@@ -14,28 +14,55 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.PostConstruct;
 import java.text.ParseException;
 import java.util.Date;
 
 @Service
 public class PhotoService {
 
-    @Value("${photo.directory}")
-    private String photoDirectory;
+
     private final PhotoRepository photoRepository;
 
     public PhotoService(PhotoRepository photoRepository) {
         this.photoRepository = photoRepository;
     }
     private final static Logger logger = LoggerFactory.getLogger(PhotoService.class);
-    private final static String U = "http://localhost:8090/photos/";
+    @Value("${photo.directory.windows}")
+    private String photoDirectoryWindows;
+
+    @Value("${photo.directory.linux}")
+    private String photoDirectoryLinux;
+
+    @Value("${photo.url.windows}")
+    private String photoUrlWindows;
+
+    @Value("${photo.url.linux}")
+    private String photoUrlLinux;
+
+    private String photoDirectory;
+    private String photoUrl;
+
+    @PostConstruct
+    public void init() {
+        // 根据操作系统动态设置路径和 URL
+        String os = System.getProperty("os.name").toLowerCase();
+        if (os.contains("win")) {
+            photoDirectory = photoDirectoryWindows;
+            photoUrl = photoUrlWindows;
+        } else {
+            photoDirectory = photoDirectoryLinux;
+            photoUrl = photoUrlLinux;
+        }
+    }
 
     public Result<?> uploadPhoto(String title, String description,
                                  Boolean isWide, MultipartFile file) {
         try {
-            //这只是保存文件到指定目录，没有保存到数据库
+            // 保存文件到指定目录
             Utils.createFile(file, photoDirectory);
-            //保存到数据库
+
+            // 保存到数据库
             Photo photo = new Photo();
             photo.setTitle(title);
             photo.setDescription(description);
@@ -45,15 +72,16 @@ public class PhotoService {
             photo.setFilePath(photoDirectory + file.getOriginalFilename());
             photo.setFileSize(file.getSize());
             photo.setFileType(file.getContentType());
-            photo.setHttpUrl(U + file.getOriginalFilename());
+            photo.setHttpUrl(photoUrl + file.getOriginalFilename()); // 使用动态 URL
             photoRepository.save(photo);
+
             return Result.success(photo);
-        }
-        catch (Exception e) {
-            logger.error("文件上传失败"+e.getMessage());
+        } catch (Exception e) {
+            logger.error("文件上传失败: " + e.getMessage());
             return Result.fail("上传失败");
         }
     }
+
 
     public Result<?> findAll(Integer page, Integer pageSize, String title, String createdAt) {
         Pageable pageable = PageRequest.of(page - 1, pageSize);

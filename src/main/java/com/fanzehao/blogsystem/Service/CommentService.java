@@ -68,19 +68,32 @@ public class CommentService {
             Article article = articleRepository.findById(articleIdLong).orElseThrow(() -> new RuntimeException("article not found"));
             Page<Comment> commentsPage = commentRepository.findByArticle(article, pageable);
             List<CommentResponse> commentResponses = commentsPage.getContent().stream().map(comment -> {
-                        CommentResponse commentResponse = new CommentResponse();
-                        commentResponse.setId(comment.getId());
-                        commentResponse.setContent(comment.getContent());
-                        commentResponse.setUsername(comment.getUser().getUsername());
-                        commentResponse.setCreatedAt(comment.getCreateAt());
-                        return commentResponse;
-                    }).collect(Collectors.toList());
+                CommentResponse commentResponse = new CommentResponse();
+                commentResponse.setId(comment.getId());
+                commentResponse.setContent(comment.getContent());
+
+                User user = comment.getUser();
+                if (user != null) {
+                    commentResponse.setUsername(user.getUsername());
+                } else {
+                    commentResponse.setUsername("Unknown User");
+                }
+
+                commentResponse.setCreatedAt(comment.getCreateAt());
+                return commentResponse;
+            }).collect(Collectors.toList());
             PageResponse<CommentResponse> pageResponse = new PageResponse<>(commentResponses, commentsPage.getTotalElements());
 
             return Result.success(pageResponse);
 
         } catch (Exception e) {
-            return Result.fail("fail to get comments");
+            e.printStackTrace();
+            return Result.fail("fail to get comments: " + e.getMessage());
         }
+    }
+
+
+    public Long getCommentCounts() {
+        return commentRepository.count();
     }
 }

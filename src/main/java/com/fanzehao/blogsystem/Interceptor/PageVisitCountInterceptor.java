@@ -22,6 +22,11 @@ public class PageVisitCountInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        if (request.getMethod().equals("OPTIONS")) {
+            // 处理预检请求
+            response.setStatus(HttpServletResponse.SC_OK);
+            return true;
+        }
         redisTemplate.opsForValue().increment(TOTAL_VISIT_COUNT,1);
         redisTemplate.opsForValue().increment(TODAY_VISIT_COUNT,1);
         logger.info("总访问量：" + redisTemplate.opsForValue().get(TOTAL_VISIT_COUNT));

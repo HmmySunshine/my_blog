@@ -102,6 +102,26 @@ public class ChatServiceImpl implements ChatService {
             }
         }
     }
+
+
+
+    //发送https请求给大模型接口
+    public ResponseEntity<String> sendModel(List<ChatMessage> message) {
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.setContentType(MediaType.APPLICATION_JSON);
+        httpHeaders.setBearerAuth(apiKey);
+        // 构造请求体
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", model);
+        requestBody.put("messages", message);
+        requestBody.put("stream", true);
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, httpHeaders);
+        ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
+        System.out.println(response.getBody());
+        return response;
+    }
+
+
     @Override
     public Result<?> sendMessage(List<ChatMessage> message) {
         // TODO Auto-generated method stub
@@ -129,24 +149,6 @@ public class ChatServiceImpl implements ChatService {
 
         return Result.success(chatMessage);
     }
-
-
-    //发送https请求给大模型接口
-    public ResponseEntity<String> sendModel(List<ChatMessage> message) {
-        HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.setContentType(MediaType.APPLICATION_JSON);
-        httpHeaders.setBearerAuth(apiKey);
-        // 构造请求体
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", model);
-        requestBody.put("messages", message);
-        requestBody.put("stream", true);
-        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, httpHeaders);
-        ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
-        System.out.println(response.getBody());
-        return response;
-    }
-
 
 
 
